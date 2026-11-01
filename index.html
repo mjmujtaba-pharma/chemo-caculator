@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chemotherapy Dose Calculator | Oncology Pharmacy</title>
+<style>
+  :root {
+    --primary: #0d47a1; --primary-dark: #002171; --primary-light: #e3f2fd;
+    --accent: #00695c; --danger: #b71c1c; --warning: #e65100; --success: #1b5e20;
+    --border: #90a4ae; --bg: #f5f7fa; --card: #ffffff; --muted: #546e7a;
+    --radius: 8px; --shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg); color: #212121; line-height: 1.45; font-size: 14px;
+  }
+  .container { max-width: 1280px; margin: 0 auto; padding: 16px; }
+
+  header {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: white; padding: 18px 24px; border-radius: var(--radius); margin-bottom: 20px;
+    display: flex; justify-content: space-between; align-items: center; box-shadow: var(--shadow);
+  }
+  header h1 { font-size: 1.45rem; font-weight: 600; }
+  header .subtitle { font-size: 0.85rem; opacity: 0.9; margin-top: 2px; }
+  .header-actions { display: flex; gap: 10px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px;
+    border: none; border-radius: 6px; font-size: 0.875rem; font-weight: 600; cursor: pointer;
+  }
+  .btn-print { background: white; color: var(--primary); }
+  .btn-print:hover { background: #e8eaf6; }
+  .btn-clear { background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.4); }
+  .btn-clear:hover { background: rgba(255,255,255,0.25); }
+  .btn-sm { padding: 5px 10px; font-size: 0.78rem; }
+  .btn-danger { background: #c62828; color: white; padding: 4px 10px; font-size: 0.75rem; }
+  .btn-danger:hover { background: #b71c1c; }
+  .btn-add { background: var(--primary); color: white; padding: 7px 14px; font-size: 0.82rem; }
+  .btn-add:hover { background: var(--primary-dark); }
+
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  @media (max-width: 1000px) { .grid-3, .grid-4 { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 600px) { .grid-3, .grid-4 { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--card); border-radius: var(--radius); border: 1px solid #cfd8dc;
+    box-shadow: var(--shadow); margin-bottom: 16px; overflow: hidden;
+  }
+  .card-header {
+    background: var(--primary-light); padding: 10px 16px; border-bottom: 1px solid #bbdefb;
+    font-weight: 600; font-size: 0.95rem; color: var(--primary-dark);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .card-body { padding: 16px; }
+
+  label {
+    display: block; font-size: 0.78rem; font-weight: 600; color: var(--muted);
+    margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.4px;
+  }
+  .form-group { margin-bottom: 12px; }
+  input[type="text"], input[type="number"], select {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--border);
+    border-radius: 5px; font-size: 0.95rem; background: #fff;
+  }
+  input:focus, select:focus {
+    outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(13,71,161,0.12);
+  }
+  input.manual-override { background: #fff8e1; border-color: #ffb300; }
+  .row { display: flex; gap: 12px; align-items: flex-end; }
+  .row > * { flex: 1; }
+
+  .metric-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px;
+  }
+  .metric {
+    background: #f8fafc; border: 1px solid #e0e7ef; border-radius: 6px;
+    padding: 10px 12px; text-align: center;
+  }
+  .metric .label { font-size: 0.7rem; font-weight: 600; color: var(--muted); text-transform: uppercase; }
+  .metric .value { font-size: 1.25rem; font-weight: 700; color: var(--primary-dark); margin: 2px 0; }
+  .metric .sub { font-size: 0.72rem; color: var(--muted); }
+  .metric.highlight { background: #e8f5e9; border-color: #a5d6a7; }
+  .metric.highlight .value { color: var(--success); }
+
+  .alert {
+    padding: 10px 14px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 12px; display: none;
+  }
+  .alert-warn { background: #fff3e0; border: 1px solid #ffb74d; color: #e65100; }
+  .alert-info { background: #e3f2fd; border: 1px solid #90caf9; color: #0d47a1; }
+
+  .section-note { font-size: 0.78rem; color: var(--muted); font-style: italic; margin-top: 6px; }
+
+  .protocol-search { margin-bottom: 12px; }
+  .protocol-search input { max-width: 380px; }
+  .protocol-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 8px; max-height: 280px; overflow-y: auto; padding: 4px;
+  }
+  .protocol-card {
+    border: 1px solid #cfd8dc; border-radius: 6px; padding: 10px 12px;
+    cursor: pointer; background: #fff; transition: all 0.15s;
+  }
+  .protocol-card:hover { border-color: var(--primary); background: #f5f9ff; }
+  .protocol-card.active {
+    border-color: var(--primary); background: var(--primary-light);
+    box-shadow: 0 0 0 2px rgba(13,71,161,0.2);
+  }
+  .protocol-card .pname { font-weight: 700; color: var(--primary-dark); font-size: 0.9rem; }
+  .protocol-card .pdrugs { font-size: 0.75rem; color: var(--muted); margin-top: 3px; }
+  .protocol-card .pcat { font-size: 0.68rem; color: #90a4ae; margin-top: 2px; text-transform: uppercase; }
+
+  .regimen-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+  .regimen-table th {
+    background: #eceff1; padding: 8px 8px; text-align: left; font-weight: 600;
+    color: var(--primary-dark); border-bottom: 2px solid #b0bec5; white-space: nowrap;
+  }
+  .regimen-table td { padding: 7px 8px; border-bottom: 1px solid #e0e0e0; vertical-align: middle; }
+  .regimen-table tr:hover { background: #fafafa; }
+  .regimen-table input[type="number"], .regimen-table input[type="text"], .regimen-table select {
+    padding: 4px 6px; font-size: 0.84rem;
+  }
+  .regimen-table .final-dose-cell {
+    font-weight: 700; font-size: 1.05rem; color: var(--success); white-space: nowrap;
+  }
+  .cap-applied { color: var(--warning); font-weight: 600; font-size: 0.75rem; }
+
+  .loaded-banner {
+    display: none; background: #e8f5e9; border: 1px solid #81c784; color: #1b5e20;
+    padding: 8px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; margin-bottom: 12px;
+  }
+  .empty-regimen { text-align: center; padding: 28px; color: var(--muted); font-size: 0.95rem; }
+
+  footer {
+    text-align: center; padding: 16px; font-size: 0.75rem; color: var(--muted);
+    border-top: 1px solid #cfd8dc; margin-top: 8px;
+  }
+
+  @media print {
+    body { background: white; font-size: 11px; }
+    .btn, .header-actions, .no-print { display: none !important; }
+    header { background: #0d47a1 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .card { box-shadow: none; border: 1px solid #999; break-inside: avoid; }
+    .container { max-width: 100%; padding: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div>
+      <h1>Chemotherapy Dose Calculator</h1>
+      <div class="subtitle">Oncology Pharmacy • Hospital Grade • Final Complete Version</div>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-clear" onclick="clearAll()">Clear All</button>
+      <button class="btn btn-print" onclick="window.print()">🖨 Print / PDF</button>
+    </div>
+  </header>
+
+  <!-- PROTOCOL SELECTOR -->
+  <div class="card no-print">
+    <div class="card-header">
+      Protocol / Regimen Library
+      <span class="section-note" style="font-weight:400;">Select a protocol to load all drugs. Every field remains editable.</span>
+    </div>
+    <div class="card-body">
+      <div class="protocol-search">
+        <input type="text" id="protocolSearch" placeholder="Search: FOLFOX, R-CHOP, TCHP, EPOCH-R, AVD-Nivo, RVP…" oninput="filterProtocols()">
+      </div>
+      <div id="loadedBanner" class="loaded-banner"></div>
+      <div class="protocol-grid" id="protocolGrid"></div>
+    </div>
+  </div>
+
+  <!-- PATIENT INFORMATION -->
+  <div class="card">
+    <div class="card-header">Patient Information</div>
+    <div class="card-body">
+      <div class="grid-4">
+        <div class="form-group">
+          <label>Patient ID / MRN</label>
+          <input type="text" id="patientId" placeholder="Optional">
+        </div>
+        <div class="form-group">
+          <label>Age (years) *</label>
+          <input type="number" id="age" min="1" max="120" step="1" placeholder="e.g. 65">
+        </div>
+        <div class="form-group">
+          <label>Sex *</label>
+          <select id="sex">
+            <option value="">— Select —</option>
+            <option value="M">Male</option>
+            <option value="F">Female</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Height (cm) *</label>
+          <input type="number" id="height" min="50" max="250" step="0.1" placeholder="e.g. 170">
+        </div>
+      </div>
+      <div class="grid-4" style="margin-top:4px;">
+        <div class="form-group">
+          <label>Actual Body Weight (kg) *</label>
+          <input type="number" id="weight" min="20" max="300" step="0.1" placeholder="e.g. 75">
+        </div>
+        <div class="form-group">
+          <label>Serum Creatinine</label>
+          <div class="row">
+            <input type="number" id="scr" min="0.1" max="20" step="0.01" placeholder="e.g. 1.0">
+            <select id="scrUnit" style="max-width:110px;">
+              <option value="mgdl">mg/dL</option>
+              <option value="umol">µmol/L</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Weight Source for Calculations</label>
+          <select id="weightSource">
+            <option value="actual">Actual Body Weight</option>
+            <option value="ideal">Ideal Body Weight (Devine)</option>
+            <option value="adjusted">Adjusted Body Weight</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Manual BSA Override (m²)</label>
+          <input type="number" id="bsaManual" min="0.5" max="3.5" step="0.01" placeholder="Leave blank to auto" class="manual-override">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CALCULATED METRICS -->
+  <div class="card">
+    <div class="card-header">
+      Calculated Body Metrics
+      <span class="section-note" style="font-weight:400;">Auto-updates as you type</span>
+    </div>
+    <div class="card-body">
+      <div class="metric-grid">
+        <div class="metric"><div class="label">BSA (Mosteller)</div><div class="value" id="bsaMosteller">—</div><div class="sub">m²</div></div>
+        <div class="metric"><div class="label">BSA (DuBois)</div><div class="value" id="bsaDubois">—</div><div class="sub">m²</div></div>
+        <div class="metric highlight"><div class="label">BSA Used</div><div class="value" id="bsaUsed">—</div><div class="sub">m²</div></div>
+        <div class="metric"><div class="label">BMI</div><div class="value" id="bmi">—</div><div class="sub" id="bmiClass">—</div></div>
+        <div class="metric"><div class="label">IBW (Devine)</div><div class="value" id="ibw">—</div><div class="sub">kg</div></div>
+        <div class="metric"><div class="label">AdjBW (0.4)</div><div class="value" id="adjbw">—</div><div class="sub">kg</div></div>
+        <div class="metric"><div class="label">Weight Used</div><div class="value" id="wtUsed">—</div><div class="sub">kg</div></div>
+        <div class="metric highlight"><div class="label">CrCl Used</div><div class="value" id="crclUsed">—</div><div class="sub">mL/min</div></div>
+      </div>
+      <div id="bmiAlert" class="alert alert-warn" style="margin-top:12px;"></div>
+    </div>
+  </div>
+
+  <!-- RENAL + ORGAN FUNCTION -->
+  <div class="card">
+    <div class="card-header">Renal Function & Organ Modifiers</div>
+    <div class="card-body">
+      <div class="grid-4">
+        <div class="form-group">
+          <label>CrCl Weight Source</label>
+          <select id="crclWeightSource">
+            <option value="same">Same as above</option>
+            <option value="actual">Actual BW</option>
+            <option value="ideal">Ideal BW</option>
+            <option value="adjusted">Adjusted BW</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Manual CrCl Override (mL/min)</label>
+          <input type="number" id="crclManual" min="5" max="200" step="0.1" placeholder="Leave blank to auto" class="manual-override">
+        </div>
+        <div class="form-group">
+          <label>Cap CrCl at 125 mL/min?</label>
+          <select id="crclCap">
+            <option value="yes">Yes (common practice)</option>
+            <option value="no">No</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Hepatic Impairment</label>
+          <select id="hepaticStatus">
+            <option value="none">None / Normal</option>
+            <option value="mild">Mild (suggest review)</option>
+            <option value="moderate">Moderate (consider ↓)</option>
+            <option value="severe">Severe (major ↓ / hold)</option>
+          </select>
+        </div>
+      </div>
+      <div id="hepaticNote" class="alert alert-info" style="display:none; margin-top:8px;"></div>
+      <p class="section-note">Hepatic status is informational. Apply individual drug reductions manually as per protocol / consultant.</p>
+    </div>
+  </div>
+
+  <!-- MULTI-DRUG REGIMEN WITH CAPS -->
+  <div class="card">
+    <div class="card-header">
+      <span>Active Regimen — Drug Doses</span>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <span class="section-note" style="font-weight:400;" id="regimenNameLabel">No protocol loaded</span>
+        <button class="btn btn-add btn-sm no-print" onclick="addManualDrug()">+ Add Drug Manually</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div id="protocolInfoBanner" style="display:none;margin-bottom:14px;padding:12px 14px;border-radius:8px;background:linear-gradient(135deg,#e8f5e9,#e3f2fd);border:1px solid #a5d6a7;font-size:0.88rem;line-height:1.5;">
+        <div style="margin-bottom:4px;"><strong>📅 Schedule:</strong> <span id="protocolSchedule">—</span></div>
+        <div><strong>📚 Reference:</strong> <span id="protocolReference">—</span></div>
+      </div>
+      <div class="grid-3" style="margin-bottom:14px;">
+        <div class="form-group">
+          <label>Global Dose Reduction (%)</label>
+          <input type="number" id="reduction" min="0" max="100" step="1" value="0" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label>Rounding Rule</label>
+          <select id="rounding">
+            <option value="none">No rounding</option>
+            <option value="1">Nearest 1 mg</option>
+            <option value="5" selected>Nearest 5 mg</option>
+            <option value="10">Nearest 10 mg</option>
+            <option value="25">Nearest 25 mg</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>&nbsp;</label>
+          <div style="font-size:0.82rem;color:var(--muted);padding-top:6px;">
+            Order of calculation: Intensity → Global % → Individual % → Max Cap → Rounding
+          </div>
+        </div>
+      </div>
+
+      <div style="overflow-x:auto;">
+        <table class="regimen-table">
+          <thead>
+            <tr>
+              <th>Drug</th>
+              <th>Method</th>
+              <th>Intensity</th>
+              <th>Indiv. ↓%</th>
+              <th>Max Cap (mg)</th>
+              <th>Raw</th>
+              <th>After Adj.</th>
+              <th>Final Dose</th>
+              <th class="no-print"></th>
+            </tr>
+          </thead>
+          <tbody id="regimenBody">
+            <tr><td colspan="9" class="empty-regimen">Select a protocol above or add drugs manually</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="section-note">
+        Yellow = manual edit. Max Cap is applied after reductions (e.g. Vincristine usually 2 mg). 
+        Leave Max Cap blank for no limit.
+      </p>
+    </div>
+  </div>
+
+  <!-- AUDIT TRAIL -->
+  <div class="card">
+    <div class="card-header">Calculation Summary (Audit Trail)</div>
+    <div class="card-body">
+      <pre id="auditTrail" style="font-family:Consolas,monospace; font-size:0.82rem; white-space:pre-wrap; background:#fafafa; padding:12px; border-radius:6px; border:1px solid #e0e0e0; min-height:80px;">Awaiting inputs…</pre>
+    </div>
+  </div>
+
+  <footer>
+    Chemotherapy Dose Calculator • Final Complete Version • For clinical decision support only.<br>
+    Always verify against institutional protocols and current laboratory values. Not a substitute for clinical judgment.
+  </footer>
+</div>
+
+<script>
+// ========== EXPANDED PROTOCOL LIBRARY (same as Section 3) ==========
+const PROTOCOLS = {
+  'FOLFOX': {
+    name: 'FOLFOX (mFOLFOX6)', category: 'GI',
+    schedule: 'Every 14 days × 12 cycles (typical)',
+    reference: 'NCCN Colon Cancer; ESMO Colorectal Guidelines; institutional mFOLFOX6',
+    drugs: [
+      { drug: 'Oxaliplatin', method: 'mgm2', dose: 85, note: 'D1, every 14 days' },
+      { drug: 'Leucovorin (Folinic acid)', method: 'mgm2', dose: 400, note: 'D1, every 14 days' },
+      { drug: '5-FU Bolus', method: 'mgm2', dose: 400, note: 'D1, every 14 days' },
+      { drug: '5-FU Infusion', method: 'mgm2', dose: 2400, note: 'Over 46 h, every 14 days' }
+    ]},
+  'FOLFIRI': {
+    name: 'FOLFIRI', category: 'GI',
+    schedule: 'Every 14 days',
+    reference: 'NCCN Colon Cancer; ESMO Colorectal Guidelines',
+    drugs: [
+      { drug: 'Irinotecan', method: 'mgm2', dose: 180, note: 'D1, every 14 days' },
+      { drug: 'Leucovorin (Folinic acid)', method: 'mgm2', dose: 400, note: 'D1, every 14 days' },
+      { drug: '5-FU Bolus', method: 'mgm2', dose: 400, note: 'D1, every 14 days' },
+      { drug: '5-FU Infusion', method: 'mgm2', dose: 2400, note: 'Over 46 h, every 14 days' }
+    ]},
+  'FOLFIRINOX': {
+    name: 'FOLFIRINOX', category: 'GI',
+    schedule: 'Every 14 days',
+    reference: 'NCCN Pancreatic Adenocarcinoma; PRODIGE 4 / ACCORD 11 trial basis',
+    drugs: [
+      { drug: 'Oxaliplatin', method: 'mgm2', dose: 85, note: 'D1, every 14 days' },
+      { drug: 'Irinotecan', method: 'mgm2', dose: 180, note: 'D1, every 14 days' },
+      { drug: 'Leucovorin (Folinic acid)', method: 'mgm2', dose: 400, note: 'D1, every 14 days' },
+      { drug: '5-FU Bolus', method: 'mgm2', dose: 400, note: 'D1, every 14 days' },
+      { drug: '5-FU Infusion', method: 'mgm2', dose: 2400, note: 'Over 46 h, every 14 days' }
+    ]},
+  'FLOT': {
+    name: 'FLOT', category: 'GI',
+    schedule: 'Every 14 days × 4–8 cycles (perioperative)',
+    reference: 'NCCN Gastric Cancer; FLOT4 trial; ESMO Gastric Cancer',
+    drugs: [
+      { drug: 'Docetaxel', method: 'mgm2', dose: 50, note: 'D1, every 14 days' },
+      { drug: 'Oxaliplatin', method: 'mgm2', dose: 85, note: 'D1, every 14 days' },
+      { drug: 'Leucovorin', method: 'mgm2', dose: 200, note: 'D1, every 14 days' },
+      { drug: '5-FU Infusion', method: 'mgm2', dose: 2600, note: 'Over 24 h, every 14 days' }
+    ]},
+  'CAPOX': {
+    name: 'CAPOX (XELOX)', category: 'GI',
+    schedule: 'Every 21 days',
+    reference: 'NCCN Colon Cancer; ESMO Colorectal Guidelines',
+    drugs: [
+      { drug: 'Oxaliplatin', method: 'mgm2', dose: 130, note: 'D1, every 21 days' },
+      { drug: 'Capecitabine', method: 'mgm2', dose: 1000, note: 'BID D1–D14, every 21 days' }
+    ]},
+  'Gem-NabPac': {
+    name: 'Gemcitabine + nab-Paclitaxel', category: 'GI',
+    schedule: 'Days 1, 8, 15 every 28 days',
+    reference: 'NCCN Pancreatic Adenocarcinoma; MPACT trial basis',
+    drugs: [
+      { drug: 'nab-Paclitaxel', method: 'mgm2', dose: 125, note: 'D1, D8, D15 every 28 days' },
+      { drug: 'Gemcitabine', method: 'mgm2', dose: 1000, note: 'D1, D8, D15 every 28 days' }
+    ]},
+  'AC': {
+    name: 'AC (Doxorubicin + Cyclophosphamide)', category: 'Breast',
+    schedule: 'Every 21 days × 4 cycles (typical)',
+    reference: 'NCCN Breast Cancer; BC Cancer Breast protocols (variant doses may differ)',
+    drugs: [
+      { drug: 'Doxorubicin', method: 'mgm2', dose: 60, note: 'D1, every 21 days' },
+      { drug: 'Cyclophosphamide', method: 'mgm2', dose: 600, note: 'D1, every 21 days' }
+    ]},
+  'TC': {
+    name: 'TC (Docetaxel + Cyclophosphamide)', category: 'Breast',
+    schedule: 'Every 21 days × 4 cycles (typical)',
+    reference: 'NCCN Breast Cancer; US Oncology 9735 / institutional',
+    drugs: [
+      { drug: 'Docetaxel', method: 'mgm2', dose: 75, note: 'D1, every 21 days' },
+      { drug: 'Cyclophosphamide', method: 'mgm2', dose: 600, note: 'D1, every 21 days' }
+    ]},
+  'TCH': {
+    name: 'TCH (Docetaxel + Carboplatin + Trastuzumab)', category: 'Breast',
+    schedule: 'Every 21 days × 6 cycles (chemo); trastuzumab continues',
+    reference: 'NCCN Breast Cancer; BCIRG 006 trial basis',
+    drugs: [
+      { drug: 'Docetaxel', method: 'mgm2', dose: 75, note: 'D1, every 21 days × 6' },
+      { drug: 'Carboplatin', method: 'auc', dose: 6, note: 'AUC 6, D1 every 21 days × 6' },
+      { drug: 'Trastuzumab', method: 'mgkg', dose: 8, note: 'Loading 8 mg/kg → maint 6 mg/kg q21d' }
+    ]},
+  'TCHP': {
+    name: 'TCHP (TCH + Pertuzumab)', category: 'Breast',
+    schedule: 'Every 21 days × 6 cycles (chemo); HER2 therapy continues',
+    reference: 'NCCN Breast Cancer; CLEOPATRA / institutional HER2 protocols',
+    drugs: [
+      { drug: 'Docetaxel', method: 'mgm2', dose: 75, note: 'D1, every 21 days × 6' },
+      { drug: 'Carboplatin', method: 'auc', dose: 6, note: 'AUC 6, D1 every 21 days × 6' },
+      { drug: 'Trastuzumab', method: 'mgkg', dose: 8, note: 'Loading 8 → maint 6 mg/kg q21d' },
+      { drug: 'Pertuzumab', method: 'fixed', dose: 840, note: 'Loading 840 → maint 420 mg q21d' }
+    ]},
+  'Paclitaxel-H': {
+    name: 'Paclitaxel + Trastuzumab', category: 'Breast',
+    schedule: 'Weekly paclitaxel; trastuzumab weekly or q3w',
+    reference: 'NCCN Breast Cancer; institutional weekly paclitaxel + trastuzumab',
+    drugs: [
+      { drug: 'Paclitaxel', method: 'mgm2', dose: 80, note: 'Weekly' },
+      { drug: 'Trastuzumab', method: 'mgkg', dose: 4, note: 'Loading 4 → 2 mg/kg weekly' }
+    ]},
+  'ddAC': {
+    name: 'Dose-dense AC', category: 'Breast',
+    schedule: 'Every 14 days × 4 cycles (+ G-CSF)',
+    reference: 'NCCN Breast Cancer; CALGB 9741 dose-dense approach',
+    drugs: [
+      { drug: 'Doxorubicin', method: 'mgm2', dose: 60, note: 'D1, every 14 days' },
+      { drug: 'Cyclophosphamide', method: 'mgm2', dose: 600, note: 'D1, every 14 days' }
+    ]},
+  'R-CHOP': {
+    name: 'R-CHOP', category: 'Lymphoma',
+    schedule: 'Every 21 days × 6 cycles (typical)',
+    reference: 'NCCN B-Cell Lymphomas; ESMO DLBCL; BC Cancer Lymphoma protocols',
+    drugs: [
+      { drug: 'Rituximab', method: 'mgm2', dose: 375, note: 'D1, every 21 days × 6 cycles' },
+      { drug: 'Cyclophosphamide', method: 'mgm2', dose: 750, note: 'D1, every 21 days × 6 cycles' },
+      { drug: 'Doxorubicin', method: 'mgm2', dose: 50, note: 'D1, every 21 days × 6 cycles' },
+      { drug: 'Vincristine', method: 'mgm2', dose: 1.4, note: 'D1, every 21 days (max 2 mg) × 6 cycles', maxCap: 2 },
+      { drug: 'Prednisone', method: 'fixed', dose: 100, note: 'PO D1–D5, every 21 days × 6 cycles' }
+    ]},
+  'R-CVP': {
+    name: 'R-CVP', category: 'Lymphoma',
+    schedule: 'Every 21 days × 6–8 cycles',
+    reference: 'NCCN B-Cell Lymphomas; ESMO Follicular Lymphoma',
+    drugs: [
+      { drug: 'Rituximab', method: 'mgm2', dose: 375, note: 'D1, every 21 days' },
+      { drug: 'Cyclophosphamide', method: 'mgm2', dose: 750, note: 'D1, every 21 days' },
+      { drug: 'Vincristine', method: 'mgm2', dose: 1.4, note: 'D1, every 21 days (max 2 mg)', maxCap: 2 },
+      { drug: 'Prednisone', method: 'fixed', dose: 40, note: 'PO D1–D5, every 21 days' }
+    ]},
+  'CVP': {
+    name: 'CVP', category: 'Lymphoma',
+    schedule: 'Every 21 days',
+    reference: 'NCCN B-Cell Lymphomas; institutional',
+    drugs: [
+      { drug: 'Cyclophosphamide', method: 'mgm2', dose: 750, note: 'D1, every 21 days' },
+      { drug: 'Vincristine', method: 'mgm2', dose: 1.4, note: 'D1, every 21 days (max 2 mg)', maxCap: 2 },
+      { drug: 'Prednisone', method: 'fixed', dose: 40, note: 'PO D1–D5, every 21 days' }
+    ]},
+  'RVP': {
+    name: 'RVP (Rituximab + Vinblastine + Prednisone)', category: 'Lymphoma',
+    schedule: 'Every 21 days',
+    reference: 'Institutional elderly HL / palliative protocols (verify locally)',
+    drugs: [
+      { drug: 'Rituximab', method: 'mgm2', dose: 375, note: 'D1, every 21 days' },
+      { drug: 'Vinblastine', method: 'mgm2', dose: 6, note: 'D1, every 21 days' },
+      { drug: 'Prednisone', method: 'fixed', dose: 100, note: 'PO D1–D5, every 21 days' }
+    ]},
+  'R-Benda': {
+    name: 'R-Bendamustine', category: 'Lymphoma',
+    schedule: 'Every 28 days × 6 cycles (typical)',
+    reference: 'NCCN B-Cell Lymphomas; ESMO Indolent Lymphoma',
+    drugs: [
+      { drug: 'Rituximab', method: 'mgm2', dose: 375, note: 'D1, every 28 days' },
+      { drug: 'Bendamustine', method: 'mgm2', dose: 90, note: 'D1–D2, every 28 days' }
+    ]},
+  'EPOCH-R': {
+    name: 'EPOCH-R (R-EPOCH)', category: 'Lymphoma',
+    schedule: 'Every 21 days × 6 cycles (typical)',
+    reference: 'NCCN B-Cell Lymphomas; NCI EPOCH-R protocols',
+    drugs: [
+      { drug: 'Rituximab', method: 'mgm2', dose: 375, note: 'D1, every 21 days' },
+      { drug: 'Etoposide', method: 'mgm2', dose: 50, note: 'D1–D4 continuous infusion' },
+      { drug: 'Prednisone', method: 'fixed', dose: 60, note: 'BID D1–D5' },
+      { drug: 'Vincristine', method: 'mgm2', dose: 0.4, note: 'D1–D4 continuous infusion' },
+      { drug: 'Cyclophosphamide', method: 'mgm2', dose: 750, note: 'D5, every 21 days' },
+      { drug: 'Doxorubicin', method: 'mgm2', dose: 10, note: 'D1–D4 continuous infusion' }
+    ]},
+  'ABVD': {
+    name: 'ABVD', category: 'Lymphoma',
+    schedule: 'Days 1 & 15 every 28 days × 2–6 cycles',
+    reference: 'NCCN Hodgkin Lymphoma; ESMO Hodgkin Lymphoma; BC Cancer HL',
+    drugs: [
+      { drug: 'Doxorubicin', method: 'mgm2', dose: 25, note: 'D1 & D15, every 28 days' },
+      { drug: 'Bleomycin', method: 'mgm2', dose: 10, note: 'D1 & D15, every 28 days' },
+      { drug: 'Vinblastine', method: 'mgm2', dose: 6, note: 'D1 & D15, every 28 days' },
+      { drug: 'Dacarbazine', method: 'mgm2', dose: 375, note: 'D1 & D15, every 28 days' }
+    ]},
+  'AVD-Nivo': {
+    name: 'AVD + Nivolumab', category: 'Lymphoma',
+    schedule: 'Days 1 & 15 every 28 days (per trial/protocol)',
+    reference: 'NCCN Hodgkin Lymphoma; CheckMate 205 / SWOG S1826 context',
+    drugs: [
+      { drug: 'Doxorubicin', method: 'mgm2', dose: 25, note: 'D1 & D15, every 28 days' },
+      { drug: 'Vinblastine', method: 'mgm2', dose: 6, note: 'D1 & D15, every 28 days' },
+      { drug: 'Dacarbazine', method: 'mgm2', dose: 375, note: 'D1 & D15, every 28 days' },
+      { drug: 'Nivolumab', method: 'mgkg', dose: 3, note: 'Per institutional / trial dose' }
+    ]},
+  'BEACOPP': {
+    name: 'BEACOPP (escalated)', category: 'Lymphoma',
+    schedule: 'Every 21 days',
+    reference: 'NCCN Hodgkin Lymphoma; GHSG escalated BEACOPP',
+    drugs: [
+      { drug: 'Bleomycin', method: 'mgm2', dose: 10, note: 'D8' },
+      { drug: 'Etoposide', method: 'mgm2', dose: 200, note: 'D1–D3' },
+      { drug: 'Doxorubicin', method: 'mgm2', dose: 35, note: 'D1' },
+      { drug: 'Cyclophosphamide', method: 'mgm2', dose: 1250, note: 'D1' },
+      { drug: 'Vincristine', method: 'mgm2', dose: 1.4, note: 'D8 (max 2 mg)', maxCap: 2 },
+      { drug: 'Procarbazine', method: 'mgm2', dose: 100, note: 'D1–D7' },
+      { drug: 'Prednisone', method: 'mgm2', dose: 40, note: 'D1–D14' }
+    ]},
+  'GDP': {
+    name: 'GDP', category: 'Lymphoma',
+    schedule: 'Every 21 days',
+    reference: 'NCCN B-Cell Lymphomas; institutional salvage',
+    drugs: [
+      { drug: 'Gemcitabine', method: 'mgm2', dose: 1000, note: 'D1 & D8' },
+      { drug: 'Dexamethasone', method: 'fixed', dose: 40, note: 'D1–D4' },
+      { drug: 'Cisplatin', method: 'mgm2', dose: 75, note: 'D1' }
+    ]},
+  'DHAP': {
+    name: 'DHAP', category: 'Lymphoma',
+    schedule: 'Every 21–28 days',
+    reference: 'NCCN B-Cell Lymphomas; institutional salvage',
+    drugs: [
+      { drug: 'Dexamethasone', method: 'fixed', dose: 40, note: 'D1–D4' },
+      { drug: 'Cytarabine', method: 'mgm2', dose: 2000, note: 'D2 q12h × 2' },
+      { drug: 'Cisplatin', method: 'mgm2', dose: 100, note: 'D1' }
+    ]},
+  'ICE': {
+    name: 'ICE', category: 'Lymphoma',
+    schedule: 'Every 21 days',
+    reference: 'NCCN B-Cell Lymphomas; institutional salvage',
+    drugs: [
+      { drug: 'Ifosfamide', method: 'mgm2', dose: 5000, note: 'D2 + Mesna' },
+      { drug: 'Carboplatin', method: 'auc', dose: 5, note: 'D2' },
+      { drug: 'Etoposide', method: 'mgm2', dose: 100, note: 'D1–D3' }
+    ]},
+  'Carbo-Pac': {
+    name: 'Carboplatin + Paclitaxel (q3w)', category: 'Lung',
+    schedule: 'Every 21 days',
+    reference: 'NCCN NSCLC; ESMO NSCLC Guidelines',
+    drugs: [
+      { drug: 'Carboplatin', method: 'auc', dose: 5, note: 'AUC 5–6, D1 every 21 days' },
+      { drug: 'Paclitaxel', method: 'mgm2', dose: 175, note: 'Over 3 h, D1 every 21 days' }
+    ]},
+  'Carbo-Pem': {
+    name: 'Carboplatin + Pemetrexed', category: 'Lung',
+    schedule: 'Every 21 days',
+    reference: 'NCCN NSCLC; ESMO NSCLC Guidelines',
+    drugs: [
+      { drug: 'Carboplatin', method: 'auc', dose: 5, note: 'AUC 5, D1 every 21 days' },
+      { drug: 'Pemetrexed', method: 'mgm2', dose: 500, note: 'D1, every 21 days' }
+    ]},
+  'Cis-Pem': {
+    name: 'Cisplatin + Pemetrexed', category: 'Lung',
+    schedule: 'Every 21 days',
+    reference: 'NCCN NSCLC; ESMO NSCLC Guidelines',
+    drugs: [
+      { drug: 'Cisplatin', method: 'mgm2', dose: 75, note: 'D1, every 21 days' },
+      { drug: 'Pemetrexed', method: 'mgm2', dose: 500, note: 'D1, every 21 days' }
+    ]},
+  'Carbo-Etop': {
+    name: 'Carboplatin + Etoposide (SCLC)', category: 'Lung',
+    schedule: 'Every 21 days × 4–6 cycles',
+    reference: 'NCCN SCLC; ESMO SCLC Guidelines',
+    drugs: [
+      { drug: 'Carboplatin', method: 'auc', dose: 5, note: 'D1, every 21 days' },
+      { drug: 'Etoposide', method: 'mgm2', dose: 100, note: 'D1–D3, every 21 days' }
+    ]},
+  'mTPF': {
+    name: 'mTPF (modified)', category: 'Head & Neck',
+    schedule: 'Every 21 days × 3 cycles (induction)',
+    reference: 'NCCN Head and Neck Cancers; TAX 323/324 context',
+    drugs: [
+      { drug: 'Docetaxel', method: 'mgm2', dose: 75, note: 'D1, every 21 days' },
+      { drug: 'Cisplatin', method: 'mgm2', dose: 75, note: 'D1, every 21 days' },
+      { drug: '5-FU Infusion', method: 'mgm2', dose: 750, note: 'D1–D5, every 21 days' }
+    ]},
+  'TPF': {
+    name: 'TPF', category: 'Head & Neck',
+    schedule: 'Every 21 days × 3 cycles (induction)',
+    reference: 'NCCN Head and Neck Cancers; ESMO H&N Guidelines',
+    drugs: [
+      { drug: 'Docetaxel', method: 'mgm2', dose: 75, note: 'D1, every 21 days' },
+      { drug: 'Cisplatin', method: 'mgm2', dose: 75, note: 'D1, every 21 days' },
+      { drug: '5-FU Infusion', method: 'mgm2', dose: 750, note: 'D1–D5 CI, every 21 days' }
+    ]},
+  'VACE': {
+    name: 'VACE', category: 'Other',
+    schedule: 'Every 21 days',
+    reference: 'Institutional protocol — verify local standard',
+    drugs: [
+      { drug: 'Vincristine', method: 'mgm2', dose: 1.5, note: 'D1 (max 2 mg)', maxCap: 2 },
+      { drug: 'Doxorubicin', method: 'mgm2', dose: 50, note: 'D1' },
+      { drug: 'Cyclophosphamide', method: 'mgm2', dose: 750, note: 'D1' },
+      { drug: 'Etoposide', method: 'mgm2', dose: 100, note: 'D1–D3' }
+    ]},
+  'IE': {
+    name: 'IE (Ifosfamide + Etoposide)', category: 'Other',
+    schedule: 'Every 21 days',
+    reference: 'Institutional / sarcoma protocols — verify locally',
+    drugs: [
+      { drug: 'Ifosfamide', method: 'mgm2', dose: 1800, note: 'D1–D5 + Mesna' },
+      { drug: 'Etoposide', method: 'mgm2', dose: 100, note: 'D1–D5' }
+    ]},
+  'BEP': {
+    name: 'BEP', category: 'Germ Cell',
+    schedule: 'Every 21 days × 3–4 cycles',
+    reference: 'NCCN Testicular Cancer; ESMO Testicular Germ Cell',
+    drugs: [
+      { drug: 'Bleomycin', method: 'fixed', dose: 30, note: 'D1, D8, D15 (units)' },
+      { drug: 'Etoposide', method: 'mgm2', dose: 100, note: 'D1–D5, every 21 days' },
+      { drug: 'Cisplatin', method: 'mgm2', dose: 20, note: 'D1–D5, every 21 days' }
+    ]},
+  'TIP': {
+    name: 'TIP', category: 'Germ Cell',
+    schedule: 'Every 21 days',
+    reference: 'NCCN Testicular Cancer; institutional salvage',
+    drugs: [
+      { drug: 'Paclitaxel', method: 'mgm2', dose: 250, note: 'D1' },
+      { drug: 'Ifosfamide', method: 'mgm2', dose: 1500, note: 'D2–D5 + Mesna' },
+      { drug: 'Cisplatin', method: 'mgm2', dose: 25, note: 'D2–D5' }
+    ]}
+};
+
+
+// Default max caps for common drugs (applied when loading if not already set)
+const DEFAULT_CAPS = {
+  'Vincristine': 2,
+  'Vinblastine': 10
+};
+
+let activeRegimen = [];
+let activeProtocolName = '';
+let nextDrugId = 1;
+
+function renderProtocols(filter = '') {
+  const grid = document.getElementById('protocolGrid');
+  const q = filter.trim().toLowerCase();
+  const keys = Object.keys(PROTOCOLS).filter(k => {
+    if (!q) return true;
+    const p = PROTOCOLS[k];
+    return p.name.toLowerCase().includes(q) || k.toLowerCase().includes(q) ||
+           (p.category && p.category.toLowerCase().includes(q)) ||
+           p.drugs.some(d => d.drug.toLowerCase().includes(q));
+  });
+  keys.sort((a, b) => {
+    const ca = PROTOCOLS[a].category || '', cb = PROTOCOLS[b].category || '';
+    if (ca !== cb) return ca.localeCompare(cb);
+    return PROTOCOLS[a].name.localeCompare(PROTOCOLS[b].name);
+  });
+  grid.innerHTML = keys.map(k => {
+    const p = PROTOCOLS[k];
+    const drugList = p.drugs.map(d => d.drug).join(', ');
+    const isActive = activeProtocolName === p.name;
+    return `<div class="protocol-card ${isActive ? 'active' : ''}" onclick="loadProtocol('${k}')">
+      <div class="pname">${p.name}</div>
+      <div class="pdrugs">${drugList}</div>
+      <div class="pcat">${p.category || ''}</div>
+    </div>`;
+  }).join('');
+}
+
+function filterProtocols() {
+  renderProtocols(document.getElementById('protocolSearch').value);
+}
+
+function loadProtocol(key) {
+  const p = PROTOCOLS[key];
+  if (!p) return;
+  activeProtocolName = p.name;
+  activeRegimen = p.drugs.map(d => {
+    let maxCap = d.maxCap !== undefined ? d.maxCap : (DEFAULT_CAPS[d.drug] || null);
+    return {
+      id: nextDrugId++,
+      drug: d.drug,
+      method: d.method,
+      dose: d.dose,
+      note: d.note || '',
+      maxCap: maxCap,
+      indivReduc: 0,
+      manual: false
+    };
+  });
+  document.getElementById('loadedBanner').style.display = 'block';
+  document.getElementById('loadedBanner').innerHTML = `Loaded: <strong>${p.name}</strong> (${p.drugs.length} drugs). Caps & individual reductions available.`;
+  document.getElementById('regimenNameLabel').textContent = p.name;
+  const schedEl = document.getElementById('protocolSchedule');
+  const refEl = document.getElementById('protocolReference');
+  const banner = document.getElementById('protocolInfoBanner');
+  if (schedEl) schedEl.textContent = p.schedule || 'See drug notes / institutional protocol';
+  if (refEl) refEl.textContent = p.reference || 'Institutional protocol / current guidelines';
+  if (banner) banner.style.display = 'block';
+  renderRegimenTable();
+  renderProtocols(document.getElementById('protocolSearch').value);
+  updateAll();
+}
+
+function addManualDrug() {
+  activeRegimen.push({
+    id: nextDrugId++, drug: '', method: 'mgm2', dose: null, note: 'Manual entry',
+    maxCap: null, indivReduc: 0, manual: true
+  });
+  if (!activeProtocolName) {
+    activeProtocolName = 'Custom Regimen';
+    document.getElementById('regimenNameLabel').textContent = 'Custom Regimen';
+  }
+  renderRegimenTable();
+  updateAll();
+}
+
+function removeDrug(id) {
+  activeRegimen = activeRegimen.filter(d => d.id !== id);
+  if (activeRegimen.length === 0) {
+    activeProtocolName = '';
+    document.getElementById('regimenNameLabel').textContent = 'No protocol loaded';
+    const _b = document.getElementById('protocolInfoBanner'); if (_b) _b.style.display = 'none';
+    const b = document.getElementById('protocolInfoBanner'); if (b) b.style.display = 'none';
+    document.getElementById('loadedBanner').style.display = 'none';
+  }
+  renderRegimenTable();
+  updateAll();
+}
+
+function unitLabel(method) {
+  if (method === 'auc') return 'AUC';
+  if (method === 'mgm2') return 'mg/m²';
+  if (method === 'mgkg') return 'mg/kg';
+  return 'mg';
+}
+
+function renderRegimenTable() {
+  const tbody = document.getElementById('regimenBody');
+  if (activeRegimen.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" class="empty-regimen">Select a protocol above or add drugs manually</td></tr>';
+    return;
+  }
+  tbody.innerHTML = activeRegimen.map(d => `
+    <tr data-id="${d.id}">
+      <td>
+        <input type="text" value="${d.drug}" placeholder="Drug name"
+               onchange="updateDrugField(${d.id}, 'drug', this.value)"
+               style="width:150px; ${d.manual ? 'background:#fff8e1;' : ''}">
+        ${d.note ? `<div style="font-size:0.7rem;color:#78909c;margin-top:2px;">${d.note}</div>` : ''}
+      </td>
+      <td>
+        <select onchange="updateDrugField(${d.id}, 'method', this.value)" style="width:90px;">
+          <option value="mgm2" ${d.method==='mgm2'?'selected':''}>mg/m²</option>
+          <option value="mgkg" ${d.method==='mgkg'?'selected':''}>mg/kg</option>
+          <option value="auc" ${d.method==='auc'?'selected':''}>AUC</option>
+          <option value="fixed" ${d.method==='fixed'?'selected':''}>Fixed</option>
+        </select>
+      </td>
+      <td>
+        <input type="number" value="${d.dose !== null && d.dose !== undefined ? d.dose : ''}"
+               step="0.1" min="0" placeholder="—" style="width:70px; ${d.manual ? 'background:#fff8e1;' : ''}"
+               onchange="updateDrugField(${d.id}, 'dose', this.value)">
+      </td>
+      <td>
+        <input type="number" value="${d.indivReduc || 0}" min="0" max="100" step="1"
+               style="width:55px;" onchange="updateDrugField(${d.id}, 'indivReduc', this.value)" title="Individual reduction %">
+      </td>
+      <td>
+        <input type="number" value="${d.maxCap !== null && d.maxCap !== undefined ? d.maxCap : ''}"
+               min="0" step="0.1" placeholder="—" style="width:65px;"
+               onchange="updateDrugField(${d.id}, 'maxCap', this.value)" title="Maximum dose in mg (blank = no cap)">
+      </td>
+      <td id="raw-${d.id}">—</td>
+      <td id="adj-${d.id}">—</td>
+      <td class="final-dose-cell" id="final-${d.id}">—</td>
+      <td class="no-print"><button class="btn btn-danger btn-sm" onclick="removeDrug(${d.id})">✕</button></td>
+    </tr>
+  `).join('');
+}
+
+function updateDrugField(id, field, value) {
+  const drug = activeRegimen.find(d => d.id === id);
+  if (!drug) return;
+  if (field === 'dose' || field === 'indivReduc' || field === 'maxCap') {
+    drug[field] = value === '' ? null : parseFloat(value);
+    if (field === 'indivReduc' && (drug.indivReduc === null || isNaN(drug.indivReduc))) drug.indivReduc = 0;
+  } else {
+    drug[field] = value;
+  }
+  drug.manual = true;
+  updateAll();
+}
+
+function num(id) { const v = parseFloat(document.getElementById(id).value); return isNaN(v) ? null : v; }
+function val(id) { return document.getElementById(id).value; }
+function setText(id, text) { const el = document.getElementById(id); if (el) el.textContent = text; }
+function roundTo(value, step) {
+  if (!step || step === 'none') return value;
+  return Math.round(value / parseFloat(step)) * parseFloat(step);
+}
+
+function calcBSA_Mosteller(htCm, wtKg) { return Math.sqrt((htCm * wtKg) / 3600); }
+function calcBSA_DuBois(htCm, wtKg) { return 0.007184 * Math.pow(htCm, 0.725) * Math.pow(wtKg, 0.425); }
+function calcBMI(htCm, wtKg) { const hm = htCm / 100; return wtKg / (hm * hm); }
+function bmiClass(bmi) {
+  if (bmi < 18.5) return 'Underweight';
+  if (bmi < 25) return 'Normal';
+  if (bmi < 30) return 'Overweight';
+  if (bmi < 35) return 'Obese I';
+  if (bmi < 40) return 'Obese II';
+  return 'Obese III';
+}
+function calcIBW(htCm, sex) {
+  const htIn = htCm / 2.54;
+  if (sex === 'M') return 50 + 2.3 * (htIn - 60);
+  if (sex === 'F') return 45.5 + 2.3 * (htIn - 60);
+  return null;
+}
+function calcAdjBW(abw, ibw) { return ibw + 0.4 * (abw - ibw); }
+function calcCrCl(age, sex, weightKg, scrMgdl) {
+  if (!age || !sex || !weightKg || !scrMgdl || scrMgdl <= 0) return null;
+  let crcl = ((140 - age) * weightKg) / (72 * scrMgdl);
+  if (sex === 'F') crcl *= 0.85;
+  return crcl;
+}
+
+function updateAll() {
+  const age = num('age'), sex = val('sex'), ht = num('height'), wt = num('weight');
+  const scrRaw = num('scr'), scrUnit = val('scrUnit'), weightSource = val('weightSource');
+  const bsaManual = num('bsaManual'), crclManual = num('crclManual');
+  const crclCap = val('crclCap') === 'yes';
+  const reduction = num('reduction') || 0, rounding = val('rounding');
+  const hepatic = val('hepaticStatus');
+
+  let scr = scrRaw;
+  if (scrRaw !== null && scrUnit === 'umol') scr = scrRaw / 88.4;
+
+  let bsaM = null, bsaD = null, bmi = null, ibw = null, adjbw = null, wtUsed = null, bsaUsed = null;
+  if (ht && wt) { bsaM = calcBSA_Mosteller(ht, wt); bsaD = calcBSA_DuBois(ht, wt); bmi = calcBMI(ht, wt); }
+  if (ht && sex) ibw = calcIBW(ht, sex);
+  if (ibw !== null && wt) adjbw = calcAdjBW(wt, ibw);
+  if (weightSource === 'actual') wtUsed = wt;
+  else if (weightSource === 'ideal') wtUsed = ibw;
+  else if (weightSource === 'adjusted') wtUsed = adjbw;
+  bsaUsed = bsaManual !== null ? bsaManual : bsaM;
+
+  setText('bsaMosteller', bsaM !== null ? bsaM.toFixed(2) : '—');
+  setText('bsaDubois', bsaD !== null ? bsaD.toFixed(2) : '—');
+  setText('bsaUsed', bsaUsed !== null ? bsaUsed.toFixed(2) : '—');
+  setText('bmi', bmi !== null ? bmi.toFixed(1) : '—');
+  setText('bmiClass', bmi !== null ? bmiClass(bmi) : '—');
+  setText('ibw', ibw !== null ? ibw.toFixed(1) : '—');
+  setText('adjbw', adjbw !== null ? adjbw.toFixed(1) : '—');
+  setText('wtUsed', wtUsed !== null ? wtUsed.toFixed(1) : '—');
+
+  const bmiAlert = document.getElementById('bmiAlert');
+  if (bmi !== null && bmi >= 30) {
+    bmiAlert.style.display = 'block';
+    bmiAlert.textContent = 'BMI ≥ 30: Consider Adjusted or Ideal Body Weight for CrCl and selected agents. Follow institutional policy.';
+  } else if (bmi !== null && bmi < 18.5) {
+    bmiAlert.style.display = 'block';
+    bmiAlert.textContent = 'BMI < 18.5 (underweight): Verify dosing weight and nutritional status.';
+  } else bmiAlert.style.display = 'none';
+
+  // Hepatic note
+  const hepNote = document.getElementById('hepaticNote');
+  if (hepatic === 'mild') {
+    hepNote.style.display = 'block';
+    hepNote.textContent = 'Mild hepatic impairment: Review dose of anthracyclines, taxanes, vinca alkaloids, etc. per protocol.';
+  } else if (hepatic === 'moderate') {
+    hepNote.style.display = 'block';
+    hepNote.textContent = 'Moderate hepatic impairment: Consider significant dose reductions for hepatically cleared agents. Confirm with protocol / consultant.';
+  } else if (hepatic === 'severe') {
+    hepNote.style.display = 'block';
+    hepNote.textContent = 'Severe hepatic impairment: Many agents require major reduction or holding. Do not proceed without clear guidance.';
+  } else {
+    hepNote.style.display = 'none';
+  }
+
+  let crclWeight = wtUsed;
+  const crclWS = val('crclWeightSource');
+  if (crclWS === 'actual') crclWeight = wt;
+  else if (crclWS === 'ideal') crclWeight = ibw;
+  else if (crclWS === 'adjusted') crclWeight = adjbw;
+
+  let crclCalc = null;
+  if (age && sex && crclWeight && scr) crclCalc = calcCrCl(age, sex, crclWeight, scr);
+  let crclUsed = crclManual !== null ? crclManual : crclCalc;
+  if (crclUsed !== null && crclCap && crclUsed > 125) crclUsed = 125;
+  setText('crclUsed', crclUsed !== null ? crclUsed.toFixed(1) : '—');
+
+  // Calculate each drug with full cascade
+  const results = [];
+  activeRegimen.forEach(d => {
+    let raw = null;
+    if (d.dose !== null && d.dose !== undefined) {
+      if (d.method === 'mgm2' && bsaUsed !== null) raw = d.dose * bsaUsed;
+      else if (d.method === 'mgkg' && wtUsed !== null) raw = d.dose * wtUsed;
+      else if (d.method === 'auc' && crclUsed !== null) raw = d.dose * (crclUsed + 25);
+      else if (d.method === 'fixed') raw = d.dose;
+    }
+
+    // 1. Global reduction
+    let afterGlobal = raw !== null ? raw * (1 - reduction / 100) : null;
+    // 2. Individual reduction
+    const indiv = d.indivReduc || 0;
+    let afterIndiv = afterGlobal !== null ? afterGlobal * (1 - indiv / 100) : null;
+    // 3. Max cap
+    let afterCap = afterIndiv;
+    let capApplied = false;
+    if (afterCap !== null && d.maxCap !== null && d.maxCap !== undefined && afterCap > d.maxCap) {
+      afterCap = d.maxCap;
+      capApplied = true;
+    }
+    // 4. Rounding
+    const final = afterCap !== null ? roundTo(afterCap, rounding === 'none' ? 0 : rounding) : null;
+
+    setText('raw-' + d.id, raw !== null ? raw.toFixed(1) : '—');
+    setText('adj-' + d.id, afterCap !== null ? afterCap.toFixed(1) + (capApplied ? ' †' : '') : '—');
+    setText('final-' + d.id, final !== null ? Math.round(final) + ' mg' : '—');
+
+    results.push({ ...d, raw, afterGlobal, afterIndiv, afterCap, final, capApplied });
+  });
+
+  buildAudit({
+    age, sex, ht, wt, scrRaw, scrUnit, weightSource, bsaManual, crclManual,
+    bsaM, bsaD, bsaUsed, bmi, ibw, adjbw, wtUsed, crclCalc, crclUsed, crclCap,
+    reduction, rounding, hepatic, results
+  });
+}
+
+function buildAudit(d) {
+  const lines = [];
+  const now = new Date().toLocaleString();
+  lines.push(`CHEMOTHERAPY DOSE CALCULATION SUMMARY`);
+  lines.push(`Generated: ${now}`);
+  lines.push(`────────────────────────────────────────`);
+  lines.push(`Patient ID : ${val('patientId') || '—'}`);
+  lines.push(`Age / Sex  : ${d.age ?? '—'} yr / ${d.sex || '—'}`);
+  lines.push(`Height     : ${d.ht ?? '—'} cm`);
+  lines.push(`Actual Wt  : ${d.wt ?? '—'} kg`);
+  lines.push(`SCr        : ${d.scrRaw ?? '—'} ${d.scrUnit === 'umol' ? 'µmol/L' : 'mg/dL'}`);
+  lines.push(``);
+  lines.push(`BSA Mosteller : ${d.bsaM !== null ? d.bsaM.toFixed(3) : '—'} m²`);
+  lines.push(`BSA Used      : ${d.bsaUsed !== null ? d.bsaUsed.toFixed(3) : '—'} m² ${d.bsaManual !== null ? '(MANUAL)' : ''}`);
+  lines.push(`BMI           : ${d.bmi !== null ? d.bmi.toFixed(1) : '—'} (${d.bmi !== null ? bmiClass(d.bmi) : '—'})`);
+  lines.push(`IBW / AdjBW   : ${d.ibw !== null ? d.ibw.toFixed(1) : '—'} / ${d.adjbw !== null ? d.adjbw.toFixed(1) : '—'} kg`);
+  lines.push(`Weight Used   : ${d.wtUsed !== null ? d.wtUsed.toFixed(1) : '—'} kg (${d.weightSource})`);
+  lines.push(`CrCl Used     : ${d.crclUsed !== null ? d.crclUsed.toFixed(1) : '—'} mL/min`);
+  lines.push(`Hepatic       : ${d.hepatic || 'none'}`);
+  lines.push(``);
+  lines.push(`PROTOCOL      : ${activeProtocolName || 'Custom / None'}`);
+  const pObj = Object.values(PROTOCOLS).find(x => x.name === activeProtocolName);
+  if (pObj) {
+    if (pObj.schedule) lines.push(`SCHEDULE      : ${pObj.schedule}`);
+    if (pObj.reference) lines.push(`REFERENCE     : ${pObj.reference}`);
+  }
+  lines.push(`Global Reduc. : ${d.reduction}%`);
+  lines.push(`Rounding      : ${d.rounding === 'none' ? 'None' : 'Nearest ' + d.rounding + ' mg'}`);
+  lines.push(``);
+  lines.push(`DRUG DOSES (Intensity → Global% → Indiv% → Cap → Round):`);
+  if (d.results.length === 0) lines.push(`  (no drugs loaded)`);
+  else d.results.forEach(r => {
+    const intens = r.dose !== null ? r.dose : '—';
+    lines.push(`  ${r.drug || '(unnamed)'}`);
+    lines.push(`    ${intens} ${unitLabel(r.method)} | Indiv↓ ${r.indivReduc||0}% | Cap ${r.maxCap ?? 'none'}`);
+    lines.push(`    Raw ${r.raw !== null ? r.raw.toFixed(1) : '—'} → Adj ${r.afterCap !== null ? r.afterCap.toFixed(1) : '—'}${r.capApplied ? ' [CAPPED]' : ''} → Final ${r.final !== null ? Math.round(r.final) : '—'} mg`);
+  });
+  lines.push(`────────────────────────────────────────`);
+  lines.push(`† = Max dose cap was applied`);
+  lines.push(`DISCLAIMER: Clinical decision support only. Verify against institutional protocols.`);
+  document.getElementById('auditTrail').textContent = lines.join('\n');
+}
+
+function clearAll() {
+  document.querySelectorAll('input[type="text"], input[type="number"]').forEach(el => {
+    if (el.id !== 'reduction') el.value = '';
+  });
+  document.getElementById('reduction').value = '0';
+  document.getElementById('sex').value = '';
+  document.getElementById('scrUnit').value = 'mgdl';
+  document.getElementById('weightSource').value = 'actual';
+  document.getElementById('crclWeightSource').value = 'same';
+  document.getElementById('crclCap').value = 'yes';
+  document.getElementById('rounding').value = '5';
+  document.getElementById('hepaticStatus').value = 'none';
+  activeRegimen = [];
+  activeProtocolName = '';
+  document.getElementById('regimenNameLabel').textContent = 'No protocol loaded';
+    const _b = document.getElementById('protocolInfoBanner'); if (_b) _b.style.display = 'none';
+  document.getElementById('loadedBanner').style.display = 'none';
+  document.getElementById('protocolSearch').value = '';
+  renderProtocols();
+  renderRegimenTable();
+  updateAll();
+}
+
+document.querySelectorAll('input, select').forEach(el => {
+  el.addEventListener('input', updateAll);
+  el.addEventListener('change', updateAll);
+});
+renderProtocols();
+renderRegimenTable();
+updateAll();
+</script>
+</body>
+</html>
